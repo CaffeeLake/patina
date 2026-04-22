@@ -17,6 +17,8 @@ use patina::{
 };
 use r_efi::efi;
 
+pub const CACHE_WRITEBACK_GRANULE: u32 = 4; // Using 4 bytes following precedence set by Tianocore
+
 /// Struct to implement X64 Cpu Init.
 ///
 /// This struct cannot be used directly. It replaces the `EfiCpu` struct when compiling for the x86_64 architecture.
@@ -69,21 +71,17 @@ impl EfiCpuX64 {
     // X64 related asm functions
     fn asm_wbinvd(&self) {
         #[cfg(not(test))]
-        {
-            // SAFETY: The caller is expected to ensure that they want to write back and invalidate the cache
-            unsafe {
-                asm!("wbinvd");
-            }
+        // SAFETY: The caller is expected to ensure that they want to write back and invalidate the cache
+        unsafe {
+            asm!("wbinvd");
         }
     }
 
     fn asm_invd(&self) {
         #[cfg(not(test))]
-        {
-            // SAFETY: The caller is expected to ensure that they want to invalidate the cache without writing back
-            unsafe {
-                asm!("invd");
-            }
+        // SAFETY: The caller is expected to ensure that they want to invalidate the cache without writing back
+        unsafe {
+            asm!("invd");
         }
     }
 
@@ -97,11 +95,9 @@ impl EfiCpuX64 {
     #[coverage(off)]
     pub fn sleep() {
         #[cfg(not(test))]
-        {
-            // SAFETY: The caller is expected to ensure that they want to halt the CPU until the next interrupt
-            unsafe {
-                asm!("hlt");
-            }
+        // SAFETY: The caller is expected to ensure that they want to halt the CPU until the next interrupt
+        unsafe {
+            asm!("hlt");
         }
     }
 
@@ -172,6 +168,11 @@ impl Cpu for EfiCpuX64 {
         let timer_value = self.asm_read_tsc(); // Assuming asm_read_tsc is defined elsewhere
 
         Ok((timer_value, self.timer_period))
+    }
+
+    #[coverage(off)]
+    fn cache_writeback_granule(&self) -> u32 {
+        CACHE_WRITEBACK_GRANULE
     }
 }
 
